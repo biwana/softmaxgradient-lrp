@@ -9,6 +9,10 @@ from skimage.transform import resize
 class _SoftMax(Layer):
     def call(self, x):
         return [K.softmax(tmp) for tmp in iutils.to_list(x)]
+    
+class _Sigmoid(Layer):
+    def call(self, x):
+        return [K.sigmoid(tmp) for tmp in iutils.to_list(x)]
 
 class _MaskedGuidedBackprop(GuidedBackprop):
     def __init__(self, 
@@ -225,6 +229,8 @@ class _SGLRPBase(BoundedDeepTaylor):
         """
         target:yt(1-yt)  base: ytyi
         """
+        # It's possible to have a perfect prediction. A small amount is added to prevent problems. 
+        epsilon = 1e-8 
         
         # target is 1, else 0
         Kronecker_delta = np.zeros(self.class_num)
@@ -241,7 +247,7 @@ class _SGLRPBase(BoundedDeepTaylor):
 
 
         X = Lambda(
-            lambda x: x * (1 - x) * Kronecker_delta + x * Inv_Kronecker_delta * target_value[:, None],
+            lambda x: (x * (1. - x) + epsilon) * Kronecker_delta + x * Inv_Kronecker_delta * target_value[:, None],
             output_shape=lambda input_shape: (None, int(input_shape[1])))(X)
         
         X = Lambda(lambda x: (self.R_mask * x))(X)
@@ -306,7 +312,7 @@ class _SGLRP2Base(BoundedDeepTaylor):
         target:yt，others:ytyj/(1-yt)
         """
         # It's possible to have a perfect prediction. A small amount is added to prevent problems. 
-        epsilon = 1e-6 
+        epsilon = 1e-8 
         
         Kronecker_delta = np.zeros(self.class_num)
         Kronecker_delta[self.target_id] = 1
@@ -397,7 +403,170 @@ class GradCAM(object):
             return np.maximum(resized_cams, 0)
         else:
             return resized_cams
+class _OAGLRPBase(BoundedDeepTaylor):
+    """Initialize R with Output Activation Gradient
+    """
+    def __init__(self, 
+                 model, 
+                 target_id, 
+                 **kwargs):
+        super(_OAGLRPBase, self).__init__(model, neuron_selection_mode="all", **kwargs)
+        self.target_id = target_id
+        self.class_num = model.output_shape[1]
+        self.initialize_r_mask()
+
+    def initialize_r_mask(self):
+        raise NotImplementedError
     
+    def _head_mapping_oldmod(self, X):
+        """
+        target:yt，others:ytyj/(1-yt)
+        """
+        # It's possible to have a perfect prediction. A small amount is added to prevent problems. 
+        epsilon = 1e-6 
+        
+        # target is 1, else 0
+        Kronecker_delta = np.zeros(self.class_num)
+        Kronecker_delta[self.target_id] = 1
+        Kronecker_delta = K.constant(Kronecker_delta)
+
+        # target is 0, else 1
+        Inv_Kronecker_delta = np.ones(self.class_num)
+        Inv_Kronecker_delta[self.target_id] = 0
+        Inv_Kronecker_delta = K.constant(Inv_Kronecker_delta)
+
+        target_value = Lambda(lambda x: (x[:, self.target_id]))(X)
+        
+        X = _Sigmoid()(X)
+        X = Lambda(
+            lambda x: x * (Kronecker_delta) - x * (Inv_Kronecker_delta) * target_value[:, None] / (1 - target_value[:, None] + epsilon),
+            output_shape=lambda input_shape: (None, int(input_shape[1])))(X)
+        
+        # targetかdualかでマスクが変わる
+        X = Lambda(lambda x: (self.R_mask * x))(X)
+        return X
+    
+    def _head_mapping(self, X):
+        """
+        target:yt(1-yt)
+        """
+        
+        # target is 1, else 0
+        Kronecker_delta = np.zeros(self.class_num)
+        Kronecker_delta[self.target_id] = 1
+        Kronecker_delta = K.constant(Kronecker_delta)
+
+        # target is 0, else 1
+        Inv_Kronecker_delta = np.ones(self.class_num)
+        Inv_Kronecker_delta[self.target_id] = 0
+        Inv_Kronecker_delta = K.constant(Inv_Kronecker_delta)
+        
+        X = _Sigmoid()(X)
+        target_value = Lambda(lambda x: (x[:, self.target_id]))(X)
+
+
+        X = Lambda(
+            lambda x: x * (1 - x) * Kronecker_delta + x * (1 - x) * Inv_Kronecker_delta, # should be plus
+            output_shape=lambda input_shape: (None, int(input_shape[1])))(X)
+        
+        X = Lambda(lambda x: (self.R_mask * x))(X)
+        return X
+    
+    def _head_mapping_sglrp(self, X):
+        """
+        target:yt(1-yt) 
+        """
+        # It's possible to have a perfect prediction. A small amount is added to prevent problems. 
+        epsilon = 1e-6 
+        
+        # target is 1, else 0
+        Kronecker_delta = np.zeros(self.class_num)
+        Kronecker_delta[self.target_id] = 1
+        Kronecker_delta = K.constant(Kronecker_delta)
+
+        # target is 0, else 1
+        Inv_Kronecker_delta = np.ones(self.class_num)
+        Inv_Kronecker_delta[self.target_id] = 0
+        Inv_Kronecker_delta = K.constant(Inv_Kronecker_delta)
+        
+        X = _Sigmoid()(X)
+        target_value = Lambda(lambda x: (x[:, self.target_id]))(X)
+
+
+        X = Lambda(
+            lambda x: x * (1 - x) * Kronecker_delta + x * Inv_Kronecker_delta * target_value[:, None],
+            output_shape=lambda input_shape: (None, int(input_shape[1])))(X)
+        
+        # targetかdualかでマスクが変わる
+        X = Lambda(lambda x: (self.R_mask * x))(X)
+        return X
+    
+    def _head_mapping_bad(self, X):
+        """
+        target:yt，others:ytyj/(1-yt)
+        """
+        # It's possible to have a perfect prediction. A small amount is added to prevent problems. 
+        epsilon = 1e-6 
+        
+        # target is 1, else 0
+        Kronecker_delta = np.zeros(self.class_num)
+        Kronecker_delta[self.target_id] = 1
+        Kronecker_delta = K.constant(Kronecker_delta)
+
+        # target is 0, else 1
+        Inv_Kronecker_delta = np.ones(self.class_num)
+        Inv_Kronecker_delta[self.target_id] = 0
+        Inv_Kronecker_delta = K.constant(Inv_Kronecker_delta)
+
+        outputs = _Sigmoid()(X)
+        target_value = Lambda(lambda x: (x[:, self.target_id]))(outputs)
+
+        X = Lambda(
+            lambda x: x * (target_value[:, None] * (1 - Kronecker_delta * outputs) - Inv_Kronecker_delta * outputs * target_value[:, None]),
+            output_shape=lambda input_shape: (None, int(input_shape[1])))(X)
+        
+        # targetかdualかでマスクが変わる
+        X = Lambda(lambda x: (self.R_mask * x))(X)
+        return X
+
+
+class _OAGLRPTarget(_OAGLRPBase):
+    def initialize_r_mask(self):
+        R_mask = np.zeros(self.class_num)
+        R_mask[self.target_id] = 1
+        self.R_mask = K.constant(R_mask)
+
+
+class _OAGLRPDual(_OAGLRPBase):
+    def initialize_r_mask(self):
+        R_mask = np.ones(self.class_num)
+        R_mask[self.target_id] = 0
+        self.R_mask = K.constant(R_mask)
+
+
+class OAGLRP(_LRPSubtraction):
+    def __init__(self, 
+                 model, 
+                 target_id, 
+                 relu=False,
+                 low=-1.,
+                 high=1.,
+                 **kwargs):
+        super(OAGLRP, self).__init__(model, target_id=target_id, low=low, high=high, **kwargs)
+        self.relu = relu
+        
+    def _get_target_analyzer(self, **kwargs):
+        return _OAGLRPTarget(self.model, target_id=self.target_id, **kwargs)
+
+    def _get_others_analyzer(self, **kwargs):
+        return _OAGLRPDual(self.model, target_id=self.target_id, **kwargs)
+    
+    def analyze(self, inputs):
+        if self.relu:
+            return np.maximum(super(OAGLRP, self).analyze(inputs), 0)
+        else:
+            return super(OAGLRP, self).analyze(inputs)
+        
         
 class GuidedGradCAM(object):
     def __init__(self, 
