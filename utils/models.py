@@ -159,14 +159,17 @@ def VGG10_nodrop(input_shape, nb_class):
 
     return model
 
-def preprocess_input(input_imgs, img_rows, img_cols, channels):
+def preprocess_input(input_imgs, img_rows, img_cols, channels, normalization="center"):
     if K.image_data_format() == 'channels_first':
         ret = input_imgs.reshape(input_imgs.shape[0], channels, img_rows, img_cols)
     else:
         ret = input_imgs.reshape(input_imgs.shape[0], img_rows, img_cols, channels)
 
     ret = ret.astype('float32')
-    ret /= 127.5
-    ret -= 1.
+    if normalization == "center":
+        ret /= 127.5
+        ret -= 1.
+    elif normalization == "positive":
+        ret /= 255.
     return ret
     
