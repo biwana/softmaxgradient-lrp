@@ -23,7 +23,7 @@ class ImageNetPreprocessGenerator(ImageDataGenerator):
                              )
         while True:
             batch_x, batch_y = next(self.batches)
-            yield (batch_x, batch_y)
+            yield (preprocess_input(batch_x), batch_y)
 
     def reset(self):
         self.batches.reset()
