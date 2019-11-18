@@ -20,16 +20,15 @@ if __name__ == "__main__":
     num_per_class = 50
     
     source_dir = os.path.join("maps", "imagenet")
-    store_dir = os.path.join("maps", "imagenet_png")
+    store_dir = sys.argv[5]
+    if not os.path.isdir(os.path.join(store_dir, method)):
+        os.mkdir(os.path.join(store_dir, method))
         
     for c in tqdm(classes):
-        start = c * num_per_class
-        end = start + num_per_class
-
         for i in range(num_per_class):
-            if os.path.isfile(os.path.join(source_dir, "%d_%d_%s_%s.npz"%(c, i, network, method))):
-                data = np.load(os.path.join(source_dir, "%d_%d_%s_%s.npz"%(c, i, network, method)))
+            if os.path.isfile(os.path.join(source_dir, method, "%d_%d_%s_%s_gt.npz"%(c, i, network, method))):
+                data = np.load(os.path.join(source_dir, method,  "%d_%d_%s_%s_gt.npz"%(c, i, network, method)))
                 heatmap(data['x'])
                 data.close()
-                plt.savefig(os.path.join(store_dir, "%d_%d_%s_%s.png"%(c, i, network, method)))
+                plt.savefig(os.path.join(store_dir, method,  "%d_%d_%s_%s_gt.png"%(c, i, network, method)))
                 plt.close()

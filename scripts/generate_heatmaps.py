@@ -49,8 +49,11 @@ if __name__ == "__main__":
         )
         
         network = "vgg19"
-
-        if not os.path.isfile(os.path.join(store_dir, "%d_%d_%s_lrp.npz"%(c, num_per_class-1, network))):
+        
+        method = "lrp"
+        if not os.path.isdir(os.path.join(store_dir, method)):
+            os.mkdir(os.path.join(store_dir, method))
+        if not os.path.isfile(os.path.join(store_dir, method, "%d_%d_%s_%s_gt.npz"%(c, num_per_class-1, network, method))):
             analyzer = LRP(
                 partial_model,
                 target_id=c,
@@ -60,10 +63,12 @@ if __name__ == "__main__":
             )
             analysis = analyzer.analyze(images)
             for i in range(num_per_class):
-                if not os.path.isfile(os.path.join(store_dir, "%d_%d_%s_lrp.npz"%(c, i, network))):
-                    np.savez_compressed(os.path.join(store_dir, "%d_%d_%s_lrp"%(c, i, network)), x=analysis[i].sum(axis=(2)))
+                np.savez_compressed(os.path.join(store_dir, method, "%d_%d_%s_%s_gt"%(c, i, network, method)), x=analysis[i].sum(axis=(2)))
 
-        if not os.path.isfile(os.path.join(store_dir, "%d_%d_%s_sglrp.npz"%(c, num_per_class-1, network))):
+        method = "sglrp"
+        if not os.path.isdir(os.path.join(store_dir, method)):
+            os.mkdir(os.path.join(store_dir, method))
+        if not os.path.isfile(os.path.join(store_dir, method, "%d_%d_%s_%s_gt.npz"%(c, num_per_class-1, network, method))):
             analyzer = SGLRP(
                 partial_model,
                 target_id=c,
@@ -73,12 +78,12 @@ if __name__ == "__main__":
             )
             analysis = analyzer.analyze(images)
             for i in range(num_per_class):
-                if not os.path.isfile(os.path.join(store_dir, "%d_%d_%s_sglrp.npz"%(c, i, network))):
-                    np.savez_compressed(os.path.join(store_dir, "%d_%d_%s_sglrp"%(c, i, network)), x=analysis[i].sum(axis=(2)))
-
-
-
-        if not os.path.isfile(os.path.join(store_dir, "%d_%d_%s_clrp.npz"%(c, num_per_class-1, network))):
+                np.savez_compressed(os.path.join(store_dir, method, "%d_%d_%s_%s_gt"%(c, i, network, method)), x=analysis[i].sum(axis=(2)))
+                    
+        method = "clrp"
+        if not os.path.isdir(os.path.join(store_dir, method)):
+            os.mkdir(os.path.join(store_dir, method))
+        if not os.path.isfile(os.path.join(store_dir, method, "%d_%d_%s_%s_gt.npz"%(c, num_per_class-1, network, method))):
             analyzer = CLRP(
                 partial_model,
                 target_id=c,
@@ -88,30 +93,6 @@ if __name__ == "__main__":
             )
             analysis = analyzer.analyze(images)
             for i in range(num_per_class):
-                if not os.path.isfile(os.path.join(store_dir, "%d_%d_%s_clrp.npz"%(c, i, network))):
-                    np.savez_compressed(os.path.join(store_dir, "%d_%d_%s_clrp"%(c, i, network)), x=analysis[i].sum(axis=(2)))
-
-        if not os.path.isfile(os.path.join(store_dir, "%d_%d_%s_gbp.npz"%(c, num_per_class-1, network))):
-            analyzer = GBP(
-                partial_model,
-                target_id=c,
-                relu=use_relu,
-            )
-            analysis = analyzer.analyze(images)
-            for i in range(num_per_class):
-                if not os.path.isfile(os.path.join(store_dir, "%d_%d_%s_gbp.npz"%(c, i, network))):
-                    np.savez_compressed(os.path.join(store_dir, "%d_%d_%s_gbp"%(c, i, network)), x=analysis[i].sum(axis=(2)))
-
-
-        if not os.path.isfile(os.path.join(store_dir, "%d_%d_%s_ggc.npz"%(c, num_per_class-1, network))):
-            analyzer = GuidedGradCAM(
-                partial_model,
-                target_id=c,
-                layer_name=target_layer,
-                relu=use_relu,
-            )
-            analysis = analyzer.analyze(images)
-            for i in range(num_per_class):
-                if not os.path.isfile(os.path.join(store_dir, "%d_%d_%s_ggc.npz"%(c, i, network))):
-                    np.savez_compressed(os.path.join(store_dir, "%d_%d_%s_ggc"%(c, i, network)), x=analysis[i].sum(axis=(2)))
+                np.savez_compressed(os.path.join(store_dir, method, "%d_%d_%s_%s_gt"%(c, i, network, method)), x=analysis[i].sum(axis=(2)))
+                
         K.clear_session()

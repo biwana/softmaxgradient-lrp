@@ -92,7 +92,7 @@ if __name__ == "__main__":
         
     # load maps
     print("Loading Maps")
-    npz_path_list = [os.path.join(store_dir, "%d_%d_%s_%s.npz"%(c, i, network, method)) for c, i in itertools.product(range(num_classes), range(num_per_class))]
+    npz_path_list = [os.path.join(store_dir, method, "%d_%d_%s_%s_gt.npz"%(c, i, network, method)) for c, i in itertools.product(range(num_classes), range(num_per_class))]
     orig_maps = np.array([np.load(npz_path)["x"] for npz_path in tqdm(npz_path_list)])
     
     # run results
