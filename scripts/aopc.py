@@ -87,7 +87,7 @@ if __name__ == "__main__":
     predictions = cache.get_cache(os.path.join('cache', "imagenet_predictions"))
     if predictions is None:
         print("Making cache file")
-        predictions = model.predict(input_imgs)
+        predictions = model.predict(val_imgs)
         cache.set_cache(os.path.join('cache', "imagenet_predictions"), predictions)
         
     # load maps
