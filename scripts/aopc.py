@@ -108,4 +108,4 @@ if __name__ == "__main__":
 
     # save results
     results_path = os.path.join("output", "full_results_imagenet_%s_%s_gt.npz"%(network, method))
-    np.savez_compressed(os.path.join("output", results_path), full=results, ave=ave_results, aopc=aopc)
+    np.savez_compressed(os.path.join(results_path), full=results, ave=ave_results, aopc=aopc)
