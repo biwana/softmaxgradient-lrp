@@ -105,7 +105,9 @@ if __name__ == "__main__":
     # run results
     results = run_change_in_y_t(model, gt, val_imgs, orig_maps, occlusion, predictions, input_shape=input_shape, num_iters=100)
     
-        
+    results_path = os.path.join("output", "full_fullresults_plus_imagenet_%s_%s_gt_%d.npz"%(network, method, num_iters))
+    np.savez_compressed(os.path.join(results_path), full=results)
+            
     # calc ave
     ave_results = np.mean(results, axis=0)
     
@@ -114,5 +116,5 @@ if __name__ == "__main__":
     aopc = 1./(num_iters+1.)*np.cumsum(f_orig - ave_results)
 
     # save results
-    results_path = os.path.join("output", "full_results_plus_imagenet_%s_%s_gt_%d.npz"%(network, method, num_iters))
-    np.savez_compressed(os.path.join(results_path), full=results, ave=ave_results, aopc=aopc)
+    results_path = os.path.join("output", "full_ave_aopc_plus_imagenet_%s_%s_gt_%d.npz"%(network, method, num_iters))
+    np.savez_compressed(os.path.join(results_path), ave=ave_results, aopc=aopc)
