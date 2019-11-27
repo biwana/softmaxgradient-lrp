@@ -32,11 +32,11 @@ def define_mask(row, col, input_shape, windowsize=9):
 def run_change_in_y_t(model, targets, images, maps, occlusion, predictions, input_shape=(50000, 224,224,3), num_iters=100):
     ret = np.zeros((input_shape[0], num_iters))
 
+    inf_map = np.full_like(maps[0], -np.inf)
     for example_id, target_id in enumerate(tqdm(targets)):
         modified_images = np.zeros((num_iters, input_shape[1], input_shape[2], input_shape[3]))
         modified_images[0] = np.copy(images[example_id])
         current_map = np.copy(maps[example_id])
-        inf_map = np.full_like(current_map, -np.inf)
         for i in np.arange(1,num_iters):
             # cant handle same max
 #             row, col = np.unravel_index(current_map.argmax(), current_map.shape)
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     method = sys.argv[2]
     network = sys.argv[3]
     
-    num_iters = sys.argv[4]
+    num_iters = int(sys.argv[4])
     num_classes = 1000
     num_per_class = 50
     store_dir = os.path.join("maps", "imagenet")
