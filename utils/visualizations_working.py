@@ -317,7 +317,94 @@ class LRPA(LRPSequentialPresetAFlat):
         else:
             return super(LRPA, self).analyze(inputs)
 
+class SGLRPSeqA(LRPSequentialPresetAFlat):
+    def __init__(self, 
+                 model,
+                 target_id, 
+                 relu=False, 
+                 **kwargs):
+        self.relu=relu
+        self.target_id = target_id
+        self.class_num = model.output_shape[1]
+        super(SGLRPSeqA, self).__init__(model, neuron_selection_mode="all", **kwargs)
     
+    def _head_mapping(self, X):
+        """
+        target:yt(1-yt)  base: ytyi
+        """
+        # It's possible to have a perfect prediction. A small amount is added to prevent problems. 
+        epsilon = 1e-8 
+        
+        # target is 1, else 0
+        Kronecker_delta = np.zeros(self.class_num)
+        Kronecker_delta[self.target_id] = 1
+        Kronecker_delta = K.constant(Kronecker_delta)
+
+        # target is 0, else 1
+        Inv_Kronecker_delta = np.ones(self.class_num)
+        Inv_Kronecker_delta[self.target_id] = 0
+        Inv_Kronecker_delta = K.constant(Inv_Kronecker_delta)
+        
+        X = _SoftMax()(X)
+        target_value = Lambda(lambda x: (x[:, self.target_id]))(X)
+
+
+        X = Lambda(
+            lambda x: (x * (1. - x) + epsilon) * Kronecker_delta - x * Inv_Kronecker_delta * target_value[:, None],
+            output_shape=lambda input_shape: (None, int(input_shape[1])))(X)
+        
+        return X
+        
+    def analyze(self, inputs):
+        if self.relu:
+            return np.maximum(super(SGLRPSeqA, self).analyze(inputs), 0)
+        else:
+            return super(SGLRPSeqA, self).analyze(inputs)
+
+class SGLRPSeqB(LRPSequentialPresetBFlat):
+    def __init__(self, 
+                 model,
+                 target_id, 
+                 relu=False, 
+                 **kwargs):
+        self.relu=relu
+        self.target_id = target_id
+        self.class_num = model.output_shape[1]
+        super(SGLRPSeqB, self).__init__(model, neuron_selection_mode="all", **kwargs)
+    
+    def _head_mapping(self, X):
+        """
+        target:yt(1-yt)  base: ytyi
+        """
+        # It's possible to have a perfect prediction. A small amount is added to prevent problems. 
+        epsilon = 1e-8 
+        
+        # target is 1, else 0
+        Kronecker_delta = np.zeros(self.class_num)
+        Kronecker_delta[self.target_id] = 1
+        Kronecker_delta = K.constant(Kronecker_delta)
+
+        # target is 0, else 1
+        Inv_Kronecker_delta = np.ones(self.class_num)
+        Inv_Kronecker_delta[self.target_id] = 0
+        Inv_Kronecker_delta = K.constant(Inv_Kronecker_delta)
+        
+        X = _SoftMax()(X)
+        target_value = Lambda(lambda x: (x[:, self.target_id]))(X)
+
+
+        X = Lambda(
+            lambda x: (x * (1. - x) + epsilon) * Kronecker_delta - x * Inv_Kronecker_delta * target_value[:, None],
+            output_shape=lambda input_shape: (None, int(input_shape[1])))(X)
+        
+        return X
+        
+    def analyze(self, inputs):
+        if self.relu:
+            return np.maximum(super(SGLRPSeqB, self).analyze(inputs), 0)
+        else:
+            return super(SGLRPSeqB, self).analyze(inputs)
+
 class _MaskedGuidedBackprop(GuidedBackprop):
     def __init__(self, 
                  model,
@@ -340,7 +427,7 @@ class _MaskedGuidedBackprop(GuidedBackprop):
         """
         initial_R = Lambda(lambda x: (x * self.R_mask))(X)
         return initial_R
-
+        
 
 class GBP(_MaskedGuidedBackprop):
     def __init__(self, 
@@ -452,6 +539,7 @@ class _LRPSubtraction(object):
         analysis = analysis_target - analysis_others * equal_magnification
         return analysis
     
+
     
 class _CLRPBase(BoundedDeepTaylor):
     def __init__(self, 
@@ -672,8 +760,7 @@ class SGLRP2(_LRPSubtraction):
             return np.maximum(super(SGLRP2, self).analyze(inputs), 0)
         else:
             return super(SGLRP2, self).analyze(inputs)
-        
-        
+
 class GradCAM(object):
     def __init__(self,
                  model,
