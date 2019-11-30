@@ -7,7 +7,7 @@ from innvestigate import utils as iutils
 import os
 import sys
 import itertools
-
+import argparse
 
 from pathlib import Path
 from utils.fileutils import CacheStorage
@@ -29,7 +29,7 @@ def define_mask(row, col, input_shape, windowsize=9):
         right = input_shape[2] - 1
     return top, bottom, left, right
 
-def run_change_in_y_t(model, targets, images, maps, occlusion, predictions, input_shape=(50000, 224,224,3), num_iters=100):
+def run_change_in_y_t(model, targets, images, maps, occlusion, predictions, input_shape=(50000, 224,224,3), num_iters=100, windowsize=9, mask="pixel"):
     ret = np.zeros((input_shape[0], num_iters))
 
     inf_map = np.full_like(maps[0], -np.inf)
@@ -42,22 +42,36 @@ def run_change_in_y_t(model, targets, images, maps, occlusion, predictions, inpu
 #             row, col = np.unravel_index(current_map.argmax(), current_map.shape)
             row, col = np.unravel_index(np.random.choice(np.flatnonzero(current_map == current_map.max())), current_map.shape)
 
-            top, bottom, left, right = define_mask(row, col, input_shape)
+            top, bottom, left, right = define_mask(row, col, input_shape, windowsize)
             modified_images[i] = modified_images[i-1]
             modified_images[i, top:bottom, left:right] = occlusion[top:bottom, left:right]
             
             # wipe out used
-#             current_map[row, col] = -np.inf
-            current_map[top:bottom, left:right] = inf_map[top:bottom, left:right]
+            if mask == "box":
+                current_map[top:bottom, left:right] = inf_map[top:bottom, left:right]
+            else:
+                current_map[row, col] = -np.inf
         ret[example_id] = model.predict(modified_images)[:,target_id]
     return ret
 
 if __name__ == "__main__":
-    os.environ["CUDA_VISIBLE_DEVICES"]=sys.argv[1]
-    method = sys.argv[2]
-    network = sys.argv[3]
+    parser = argparse.ArgumentParser(description="AOPC calculator")
+    parser.add_arguemnt('-g', '--gpu', type=str, default="0", help='Controls which gpus cuda uses')
+    parser.add_arguemnt('-m', '--method', type=str, default="random", help='The method to run')
+    parser.add_arguemnt('-n', '--network', type=str, default="vgg19", help='The network model')
+    parser.add_arguemnt('-i', '--iters', type=int, default=100, help='How many iterations')
+    parser.add_arguemnt('-w', '--windowsize', type=int, default=9, help='Window size')
+    parser.add_arguemnt('-i', '--iters', type=int, default=100, help='How many iterations')
+    parser.add_arguemnt('-k', '--mask', type=int, default="pixel", help='Mask, "box" or "pixel"')
+    args = parser.parse_args()
     
-    num_iters = int(sys.argv[4])
+    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
+    method = args.method
+    network = args.network
+    num_iters = args.iters
+    windowsize = args.windowsize
+    mask = args.mask
+    
     num_classes = 1000
     num_per_class = 50
     store_dir = os.path.join("maps", "imagenet")
@@ -103,9 +117,9 @@ if __name__ == "__main__":
         orig_maps = np.random.uniform(0, 255, (num_classes*num_per_class, input_shape[1], input_shape[2]))
     
     # run results
-    results = run_change_in_y_t(model, gt, val_imgs, orig_maps, occlusion, predictions, input_shape=input_shape, num_iters=100)
+    results = run_change_in_y_t(model, gt, val_imgs, orig_maps, occlusion, predictions, input_shape=input_shape, num_iters=num_iters, windowsize=windowsize, mask=mask)
     
-    results_path = os.path.join("output", "full_fullresults_plus_imagenet_%s_%s_gt_%d.npz"%(network, method, num_iters))
+    results_path = os.path.join("output", "full_fullresults_plus_imagenet_%s_%s_gt_%d_w%d_%s.npz"%(network, method, num_iters, windowsize, mask))
     np.savez_compressed(os.path.join(results_path), full=results)
             
     # calc ave
@@ -116,5 +130,5 @@ if __name__ == "__main__":
     aopc = 1./(num_iters+1.)*np.cumsum(f_orig - ave_results)
 
     # save results
-    results_path = os.path.join("output", "full_ave_aopc_plus_imagenet_%s_%s_gt_%d.npz"%(network, method, num_iters))
+    results_path = os.path.join("output", "full_ave_aopc_plus_imagenet_%s_%s_gt_%d_w%d_%s.npz"%(network, method, num_iters, windowsize, mask))
     np.savez_compressed(os.path.join(results_path), ave=ave_results, aopc=aopc)
