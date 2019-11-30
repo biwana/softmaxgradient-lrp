@@ -61,7 +61,7 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--network', type=str, default="vgg19", help='The network model')
     parser.add_argument('-i', '--iters', type=int, default=100, help='How many iterations')
     parser.add_argument('-w', '--windowsize', type=int, default=9, help='Window size')
-    parser.add_argument('-k', '--mask', type=int, default="pixel", help='Mask, "box" or "pixel"')
+    parser.add_argument('-k', '--mask', type=str, default="pixel", help='Mask, "box" or "pixel"')
     args = parser.parse_args()
     
     os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
