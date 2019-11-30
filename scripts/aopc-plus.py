@@ -56,12 +56,12 @@ def run_change_in_y_t(model, targets, images, maps, occlusion, predictions, inpu
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AOPC calculator")
-    parser.add_arguement('-g', '--gpu', type=str, default="0", help='Controls which gpus cuda uses')
-    parser.add_arguement('-m', '--method', type=str, default="random", help='The method to run')
-    parser.add_arguement('-n', '--network', type=str, default="vgg19", help='The network model')
-    parser.add_arguement('-i', '--iters', type=int, default=100, help='How many iterations')
-    parser.add_arguement('-w', '--windowsize', type=int, default=9, help='Window size')
-    parser.add_arguement('-k', '--mask', type=int, default="pixel", help='Mask, "box" or "pixel"')
+    parser.add_argument('-g', '--gpu', type=str, default="0", help='Controls which gpus cuda uses')
+    parser.add_argument('-m', '--method', type=str, default="random", help='The method to run')
+    parser.add_argument('-n', '--network', type=str, default="vgg19", help='The network model')
+    parser.add_argument('-i', '--iters', type=int, default=100, help='How many iterations')
+    parser.add_argument('-w', '--windowsize', type=int, default=9, help='Window size')
+    parser.add_argument('-k', '--mask', type=int, default="pixel", help='Mask, "box" or "pixel"')
     args = parser.parse_args()
     
     os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
