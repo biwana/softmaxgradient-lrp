@@ -62,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--iters', type=int, default=100, help='How many iterations')
     parser.add_argument('-w', '--windowsize', type=int, default=9, help='Window size')
     parser.add_argument('-k', '--mask', type=str, default="pixel", help='Mask, "box" or "pixel"')
+    parser.add_argument('-o', '--occlusion', type=str, default="random", help='Occulsion, "random" or "zero"')
     args = parser.parse_args()
     
     os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
@@ -70,6 +71,7 @@ if __name__ == "__main__":
     num_iters = args.iters
     windowsize = args.windowsize
     mask = args.mask
+    occtype = args.occlusion
     
     num_classes = 1000
     num_per_class = 50
@@ -95,7 +97,10 @@ if __name__ == "__main__":
     )
     
     # define occlusion
-    occlusion = np.random.uniform(0, 255, (input_shape[1], input_shape[2], input_shape[3]))
+    if occtype == "zeros":
+        occlusion = np.zeros((input_shape[1], input_shape[2], input_shape[3]))
+    else:
+        occlusion = np.random.uniform(0, 255, (input_shape[1], input_shape[2], input_shape[3]))
     occlusion = preprocess_input(occlusion)
     
     # load predictions
@@ -118,7 +123,7 @@ if __name__ == "__main__":
     # run results
     results = run_change_in_y_t(model, gt, val_imgs, orig_maps, occlusion, predictions, input_shape=input_shape, num_iters=num_iters, windowsize=windowsize, mask=mask)
     
-    results_path = os.path.join("output", "full_fullresults_plus_imagenet_%s_%s_gt_%d_w%d_%s.npz"%(network, method, num_iters, windowsize, mask))
+    results_path = os.path.join("output", "full_fullresults_plus_imagenet_%s_%s_gt_%d_w%d_%s_occ%s.npz"%(network, method, num_iters, windowsize, mask, occtype))
     np.savez_compressed(os.path.join(results_path), full=results)
             
     # calc ave
@@ -129,5 +134,5 @@ if __name__ == "__main__":
     aopc = 1./(num_iters+1.)*np.cumsum(f_orig - ave_results)
 
     # save results
-    results_path = os.path.join("output", "full_ave_aopc_plus_imagenet_%s_%s_gt_%d_w%d_%s.npz"%(network, method, num_iters, windowsize, mask))
+    results_path = os.path.join("output", "full_ave_aopc_plus_imagenet_%s_%s_gt_%d_w%d_%s_occ%s.npz"%(network, method, num_iters, windowsize, mask, occtype))
     np.savez_compressed(os.path.join(results_path), ave=ave_results, aopc=aopc)
