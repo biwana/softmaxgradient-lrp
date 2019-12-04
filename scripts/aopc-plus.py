@@ -21,12 +21,12 @@ def define_mask(row, col, input_shape, windowsize=9):
 
     if top < 0:
         top = 0
-    if bottom > input_shape[1] - 1:
-        bottom = input_shape[1] - 1
+    if bottom > input_shape[1]:
+        bottom = input_shape[1]
     if left < 0:
         left = 0
-    if right > input_shape[2] - 1:
-        right = input_shape[2] - 1
+    if right > input_shape[2]:
+        right = input_shape[2]
     return top, bottom, left, right
 
 def run_change_in_y_t(model, targets, images, maps, occlusion, predictions, input_shape=(50000, 224,224,3), num_iters=100, windowsize=9, mask="pixel"):
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     # run results
     results = run_change_in_y_t(model, gt, val_imgs, orig_maps, occlusion, predictions, input_shape=input_shape, num_iters=num_iters, windowsize=windowsize, mask=mask)
     
-    results_path = os.path.join("output", "full_fullresults_plus_imagenet_%s_%s_gt_%d_w%d_%s_occ%s.npz"%(network, method, num_iters, windowsize, mask, occtype))
+    results_path = os.path.join("output", "full2_fullresults_plus_imagenet_%s_%s_gt_%d_w%d_%s_occ%s.npz"%(network, method, num_iters, windowsize, mask, occtype))
     np.savez_compressed(os.path.join(results_path), full=results)
             
     # calc ave
@@ -134,5 +134,5 @@ if __name__ == "__main__":
     aopc = 1./(num_iters+1.)*np.cumsum(f_orig - ave_results)
 
     # save results
-    results_path = os.path.join("output", "full_ave_aopc_plus_imagenet_%s_%s_gt_%d_w%d_%s_occ%s.npz"%(network, method, num_iters, windowsize, mask, occtype))
+    results_path = os.path.join("output", "full2_ave_aopc_plus_imagenet_%s_%s_gt_%d_w%d_%s_occ%s.npz"%(network, method, num_iters, windowsize, mask, occtype))
     np.savez_compressed(os.path.join(results_path), ave=ave_results, aopc=aopc)
